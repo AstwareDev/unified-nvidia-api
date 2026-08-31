@@ -41,7 +41,7 @@ export const MODELS: ModelInfo[] = [
       "Moonshot AI Kimi K3. Reasoning traces with low/high/max effort, and thinking can be switched off.",
     reasoningEfforts: KIMI_EFFORTS,
     defaultEffort: "high",
-    modalities: { input: ["text"], output: ["text"] },
+    modalities: { input: ["text", "image", "video"], output: ["text"] },
     contextWindow: 1_000_000,
     maxOutputTokens: DEFAULT_MAX_OUTPUT,
   },

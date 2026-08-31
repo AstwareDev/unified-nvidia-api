@@ -222,6 +222,13 @@ describe("model capability table", () => {
     expect(canDisableThinking(pro)).toBe(true);
   });
 
+  it("Kimi K3 accepts image and video input", () => {
+    const kimi = getModel("moonshotai/kimi-k3");
+    if (!kimi) throw new Error("kimi missing");
+    expect(kimi.modalities.input).toContain("image");
+    expect(kimi.modalities.input).toContain("video");
+  });
+
   it("declares modalities and a context window for every model", () => {
     for (const m of [
       "moonshotai/kimi-k3",
