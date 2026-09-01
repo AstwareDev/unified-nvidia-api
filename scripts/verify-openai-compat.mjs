@@ -37,7 +37,7 @@ console.log("usage:", JSON.stringify(c.usage));
 
 console.log("--- streaming completion ---");
 const stream = await client.chat.completions.create({
-  model: "nvidia/nemotron-3-nano-30b-a3b",
+  model: "nvidia/nemotron-3-super-120b-a12b",
   messages: [{ role: "user", content: "Count 1 to 5, comma separated." }],
   max_tokens: 1500,
   stream: true,

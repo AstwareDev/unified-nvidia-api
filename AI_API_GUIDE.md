@@ -84,7 +84,7 @@ that are not actually callable.
 | `moonshotai/kimi-k3` | Kimi K3 | `none, low, high, max` | yes | 1M | text → text |
 | `nvidia/nemotron-3-ultra-550b-a55b` | Nemotron 3 Ultra 550B | `none, minimal, low, medium, high, xhigh, max` | yes | 256K | text → text |
 | `nvidia/nemotron-3-super-120b-a12b` | Nemotron 3 Super 120B | `none, minimal, low, medium, high, xhigh, max` | yes | 256K | text → text |
-| `nvidia/nemotron-3-nano-30b-a3b` | Nemotron 3 Nano 30B | `none, minimal, low, medium, high, xhigh, max` | yes | 256K | text → text |
+| `google/diffusiongemma-26b-a4b-it` | DiffusionGemma 26B A4B IT | `none, high` | yes | 256K | text, image → text |
 | `deepseek-ai/deepseek-v4-pro-0813` | DeepSeek V4 Pro | `none, low, high, max` * | yes | 1M | text → text |
 | `deepseek-ai/deepseek-v4-flash-0731` | DeepSeek V4 Flash | `none, low, high, max` * | yes | 1M | text → text |
 | `openai/gpt-oss-120b` | GPT-OSS 120B | `low, medium, high` | **no** | 128K | text → text |
@@ -343,7 +343,7 @@ Standard OpenAI error envelope, so SDK error classes work normally
 - **Cold starts are real.** Large models (`nemotron-3-ultra-550b-a55b`,
   `deepseek-v4-pro-0813`, `gpt-oss-120b`) can take tens of seconds for the first
   token when their NIM function is cold. Set generous client timeouts —
-  60–120s — and prefer `nemotron-3-nano-30b-a3b` or `kimi-k3` for quick tests.
+  60–120s — and prefer `diffusiongemma-26b-a4b-it` or `kimi-k3` for quick tests.
 - **429 handling is automatic.** The gateway retries across its key pool before
   surfacing an error, so a `429` from this API means *every* key was limited.
   Back off and retry rather than hammering.

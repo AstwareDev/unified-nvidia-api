@@ -16,6 +16,8 @@ const OPENAI_EFFORTS: ReasoningEffort[] = ["low", "medium", "high"];
 
 const DEEPSEEK_EFFORTS: ReasoningEffort[] = ["none", "low", "high", "max"];
 
+const DIFFUSIONGEMMA_EFFORTS: ReasoningEffort[] = ["none", "high"];
+
 export type Modality = "text" | "image" | "audio" | "video";
 
 export interface ModelInfo {
@@ -69,13 +71,14 @@ export const MODELS: ModelInfo[] = [
     maxOutputTokens: DEFAULT_MAX_OUTPUT,
   },
   {
-    id: "nvidia/nemotron-3-nano-30b-a3b",
-    displayName: "Nemotron 3 Nano 30B",
-    ownedBy: "nvidia",
-    description: "Small, fast Nemotron 3 MoE. Good default for quick tests.",
-    reasoningEfforts: NEMOTRON_EFFORTS,
-    defaultEffort: "medium",
-    modalities: { input: ["text"], output: ["text"] },
+    id: "google/diffusiongemma-26b-a4b-it",
+    displayName: "DiffusionGemma 26B A4B IT",
+    ownedBy: "google",
+    description:
+      "Google DiffusionGemma, a diffusion-based Gemma model. Thinking is a simple on/off toggle.",
+    reasoningEfforts: DIFFUSIONGEMMA_EFFORTS,
+    defaultEffort: "high",
+    modalities: { input: ["text", "image"], output: ["text"] },
     contextWindow: 256_000,
     maxOutputTokens: DEFAULT_MAX_OUTPUT,
   },

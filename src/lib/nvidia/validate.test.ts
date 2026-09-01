@@ -103,7 +103,7 @@ describe("reasoning_effort", () => {
   ] as const)("accepts %s on Nemotron 3, which implements the full range", (effort) => {
     const value = ok({
       ...base,
-      model: "nvidia/nemotron-3-nano-30b-a3b",
+      model: "nvidia/nemotron-3-super-120b-a12b",
       reasoning_effort: effort,
     });
     expect(value.upstreamBody.reasoning_effort).toBe(effort);

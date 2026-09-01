@@ -70,6 +70,7 @@ const PROVIDER_ICONS: Record<
   nvidia: { src: "/nvidia-color.svg", alt: "NVIDIA" },
   "deepseek-ai": { src: "/deepseek-color.svg", alt: "DeepSeek" },
   openai: { src: "/openai.svg", alt: "OpenAI", invert: true },
+  google: { src: "/google-color.svg", alt: "Google" },
 };
 
 const EFFORT_HINTS: Record<string, string> = {
