@@ -1,4 +1,4 @@
-# Unified NVIDIA API <img src="/public/nvidia-color.svg" alt="NVIDIA logo" height="24">
+# Unified NVIDIA API <img src="/public/nvidia-color.svg" alt="NVIDIA logo" height="22">
 
 An OpenAI-compatible chat completions gateway in front of [NVIDIA NIM](https://build.nvidia.com),
 with automatic rotation across multiple API keys, Kimi K3 in the model list,
