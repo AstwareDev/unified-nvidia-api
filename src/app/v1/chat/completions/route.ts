@@ -26,106 +26,85 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const {
-    stream,
-    upstreamBody,
-    reasoningEffort,
-    upstreamEffort,
-    thinkingEnabled,
-    maxTokens,
-  } = validated.value;
+  const { model, stream, upstreamBody, reasoningEffort, maxTokens } =
+    validated.value;
 
   const result = await callUpstream("/chat/completions", upstreamBody, {
     signal: request.signal,
   });
 
+  const headers = new Headers({
+    "X-Nvidia-Attempts": String(result.attempts.length),
+    "X-Nvidia-Max-Tokens": String(maxTokens),
+    "X-Thinking": reasoningEffort === "none" ? "disabled" : "enabled",
+  });
+  if (reasoningEffort) headers.set("X-Reasoning-Effort", reasoningEffort);
+
   if (!result.ok) {
     return NextResponse.json(
       openAIError(result.message, result.type, null, result.code),
-      {
-        status: result.status,
-        headers: gatewayHeaders({
-          keyId: null,
-          attempts: result.attempts.length,
-          reasoningEffort,
-          upstreamEffort,
-          thinkingEnabled,
-          maxTokens,
-        }),
-      },
+      { status: result.status, headers },
     );
   }
 
+  headers.set("X-Nvidia-Key-Id", result.keyId);
   const upstream = result.response;
-  const headers = gatewayHeaders({
-    keyId: result.keyId,
-    attempts: result.attempts.length,
-    reasoningEffort,
-    upstreamEffort,
-    thinkingEnabled,
-    maxTokens,
-  });
 
   if (!upstream.ok) {
-    const text = await upstream.text();
-    let message = text.slice(0, 500);
-    try {
-      const parsed = JSON.parse(text) as {
-        error?: { message?: string };
-        detail?: string;
-        message?: string;
-      };
-      message =
-        parsed.error?.message ?? parsed.detail ?? parsed.message ?? message;
-    } catch {}
+    const message = await readUpstreamError(upstream);
+    if (upstream.status === 404) {
+      return NextResponse.json(
+        openAIError(
+          `NVIDIA's API returned 404 for '${model}'. The model id is not served by this API (it is missing from NVIDIA's /v1/models list) or your key has no access to it. Upstream said: ${message}`,
+          "invalid_request_error",
+          "model",
+          "upstream_model_not_found",
+        ),
+        { status: 404, headers },
+      );
+    }
     return NextResponse.json(
       openAIError(message, "invalid_request_error", null, "upstream_rejected"),
       { status: upstream.status, headers },
     );
   }
 
-  if (stream) {
-    if (!upstream.body) {
-      return NextResponse.json(
-        openAIError(
-          "Upstream returned an empty stream.",
-          "upstream_error",
-          null,
-          "empty_stream",
-        ),
-        { status: 502, headers },
-      );
-    }
-    headers.set("Content-Type", "text/event-stream; charset=utf-8");
-    headers.set("Cache-Control", "no-cache, no-transform");
-    headers.set("Connection", "keep-alive");
-    headers.set("X-Accel-Buffering", "no");
-    return new Response(upstream.body, { status: 200, headers });
+  if (!stream) {
+    return NextResponse.json(await upstream.json(), { status: 200, headers });
   }
 
-  const json = await upstream.json();
-  return NextResponse.json(json, { status: 200, headers });
-}
-
-function gatewayHeaders(info: {
-  keyId: string | null;
-  attempts: number;
-  reasoningEffort: string | null;
-  upstreamEffort: string | null;
-  thinkingEnabled: boolean;
-  maxTokens: number;
-}): Headers {
-  const headers = new Headers();
-  if (info.keyId) headers.set("X-Nvidia-Key-Id", info.keyId);
-  headers.set("X-Nvidia-Attempts", String(info.attempts));
-  headers.set("X-Nvidia-Max-Tokens", String(info.maxTokens));
-  headers.set("X-Thinking", info.thinkingEnabled ? "enabled" : "disabled");
-  if (info.reasoningEffort) {
-    headers.set("X-Reasoning-Effort", info.reasoningEffort);
-    headers.set(
-      "X-Reasoning-Effort-Upstream",
-      info.upstreamEffort ?? "unsupported",
+  if (!upstream.body) {
+    return NextResponse.json(
+      openAIError(
+        "Upstream returned an empty stream.",
+        "upstream_error",
+        null,
+        "empty_stream",
+      ),
+      { status: 502, headers },
     );
   }
-  return headers;
+  headers.set("Content-Type", "text/event-stream; charset=utf-8");
+  headers.set("Cache-Control", "no-cache, no-transform");
+  headers.set("X-Accel-Buffering", "no");
+  return new Response(upstream.body, { status: 200, headers });
+}
+
+async function readUpstreamError(response: Response): Promise<string> {
+  const text = await response.text();
+  try {
+    const parsed = JSON.parse(text) as {
+      error?: { message?: string };
+      detail?: string;
+      message?: string;
+    };
+    return (
+      parsed.error?.message ??
+      parsed.detail ??
+      parsed.message ??
+      text
+    ).slice(0, 500);
+  } catch {
+    return text.trim().slice(0, 500);
+  }
 }

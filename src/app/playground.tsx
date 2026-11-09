@@ -112,7 +112,7 @@ export default function Playground() {
   const [meta, setMeta] = useState<{
     keyId: string | null;
     attempts: string | null;
-    upstreamEffort: string | null;
+    effort: string | null;
     thinking: string | null;
   } | null>(null);
   const [keys, setKeys] = useState<KeyEntry[]>([]);
@@ -215,7 +215,7 @@ export default function Playground() {
       setMeta({
         keyId: res.headers.get("x-nvidia-key-id"),
         attempts: res.headers.get("x-nvidia-attempts"),
-        upstreamEffort: res.headers.get("x-reasoning-effort-upstream"),
+        effort: res.headers.get("x-reasoning-effort"),
         thinking: res.headers.get("x-thinking"),
       });
 
@@ -584,7 +584,7 @@ function StatsBar({
   meta: {
     keyId: string | null;
     attempts: string | null;
-    upstreamEffort: string | null;
+    effort: string | null;
     thinking: string | null;
   } | null;
 }) {
@@ -627,7 +627,7 @@ function StatsBar({
           </span>
           <span>attempts: {meta.attempts ?? "—"}</span>
           <span>thinking: {meta.thinking ?? "—"}</span>
-          <span>effort sent: {meta.upstreamEffort ?? "none"}</span>
+          <span>effort: {meta.effort ?? "none"}</span>
         </div>
       )}
     </div>

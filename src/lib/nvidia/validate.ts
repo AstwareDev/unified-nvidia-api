@@ -19,8 +19,6 @@ export interface ValidatedRequest {
   maxTokens: number;
   stream: boolean;
   reasoningEffort: ReasoningEffort | null;
-  upstreamEffort: string | null;
-  thinkingEnabled: boolean;
   upstreamBody: Record<string, unknown>;
 }
 
@@ -262,9 +260,8 @@ export function validateChatRequest(
     upstreamBody.stream_options = { include_usage: true };
   }
 
-  const upstreamEffort: string | null = reasoningEffort;
-  if (upstreamEffort !== null) {
-    upstreamBody.reasoning_effort = upstreamEffort;
+  if (reasoningEffort !== null) {
+    upstreamBody.reasoning_effort = reasoningEffort;
   }
 
   return {
@@ -274,8 +271,6 @@ export function validateChatRequest(
       maxTokens,
       stream,
       reasoningEffort,
-      upstreamEffort,
-      thinkingEnabled: reasoningEffort !== "none",
       upstreamBody,
     },
   };

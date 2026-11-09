@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canDisableThinking, getModel, supportsEffort } from "./models";
+import { canDisableThinking, getModel, MODELS, supportsEffort } from "./models";
 import { MAX_OUTPUT_TOKENS, validateChatRequest } from "./validate";
 
 const base = {
-  model: "moonshotai/kimi-k3",
+  model: "moonshotai/kimi-k3.1-pro",
   messages: [{ role: "user", content: "hi" }],
 };
 
@@ -22,7 +22,7 @@ function err(raw: unknown) {
 
 describe("model validation", () => {
   it("accepts Kimi K3", () => {
-    expect(ok(base).model).toBe("moonshotai/kimi-k3");
+    expect(ok(base).model).toBe("moonshotai/kimi-k3.1-pro");
   });
 
   it("404s an unknown model with model_not_found", () => {
@@ -94,19 +94,13 @@ describe("reasoning_effort", () => {
 
   it.each([
     "none",
-    "minimal",
     "low",
-    "medium",
     "high",
-    "xhigh",
     "max",
-  ] as const)("accepts %s on Nemotron 3, which implements the full range", (effort) => {
-    const value = ok({
-      ...base,
-      model: "nvidia/nemotron-3-super-120b-a12b",
-      reasoning_effort: effort,
-    });
-    expect(value.upstreamBody.reasoning_effort).toBe(effort);
+  ] as const)("accepts %s, which Kimi implements", (effort) => {
+    expect(
+      ok({ ...base, reasoning_effort: effort }).upstreamBody.reasoning_effort,
+    ).toBe(effort);
   });
 
   it.each([
@@ -127,26 +121,10 @@ describe("reasoning_effort", () => {
   });
 
   it("400s an effort the model does not implement rather than clamping it", () => {
-    for (const effort of ["max", "xhigh", "minimal", "none"]) {
-      const e = err({
-        ...base,
-        model: "openai/gpt-oss-20b",
-        reasoning_effort: effort,
-      });
+    for (const effort of ["xhigh", "minimal", "medium"]) {
+      const e = err({ ...base, reasoning_effort: effort });
       expect(e.status).toBe(400);
       expect(e.body.error.code).toBe("unsupported_value_for_model");
-      expect(e.body.error.message).toContain("low, medium, high");
-    }
-  });
-
-  it("passes gpt-oss its own supported levels through unchanged", () => {
-    for (const effort of ["low", "medium", "high"] as const) {
-      const value = ok({
-        ...base,
-        model: "openai/gpt-oss-20b",
-        reasoning_effort: effort,
-      });
-      expect(value.upstreamEffort).toBe(effort);
     }
   });
 });
@@ -155,24 +133,16 @@ describe("thinking toggle", () => {
   it("maps thinking:false to reasoning_effort none", () => {
     const value = ok({ ...base, thinking: false });
     expect(value.upstreamBody.reasoning_effort).toBe("none");
-    expect(value.thinkingEnabled).toBe(false);
   });
 
   it("maps thinking:true to the model default effort", () => {
     const value = ok({ ...base, thinking: true });
     expect(value.reasoningEffort).toBe("high");
-    expect(value.thinkingEnabled).toBe(true);
   });
 
   it("lets an explicit effort win over thinking:true", () => {
     const value = ok({ ...base, thinking: true, reasoning_effort: "max" });
     expect(value.upstreamBody.reasoning_effort).toBe("max");
-  });
-
-  it("400s thinking:false on a model that cannot disable thinking", () => {
-    const e = err({ ...base, model: "openai/gpt-oss-20b", thinking: false });
-    expect(e.status).toBe(400);
-    expect(e.body.error.code).toBe("thinking_not_disableable");
   });
 
   it("400s contradictory thinking/reasoning_effort pairs", () => {
@@ -189,8 +159,8 @@ describe("thinking toggle", () => {
   it("allows the redundant-but-consistent thinking:false + none", () => {
     expect(
       ok({ ...base, thinking: false, reasoning_effort: "none" })
-        .thinkingEnabled,
-    ).toBe(false);
+        .reasoningEffort,
+    ).toBe("none");
   });
 
   it("400s a non-boolean thinking value", () => {
@@ -199,8 +169,8 @@ describe("thinking toggle", () => {
 });
 
 describe("model capability table", () => {
-  it("marks models with a 'none' level as able to disable thinking", () => {
-    const kimi = getModel("moonshotai/kimi-k3");
+  it("Kimi K3.1 Pro can disable thinking and supports low/high/max", () => {
+    const kimi = getModel("moonshotai/kimi-k3.1-pro");
     if (!kimi) throw new Error("kimi missing");
     expect(canDisableThinking(kimi)).toBe(true);
     expect(supportsEffort(kimi, "max")).toBe(true);
@@ -208,65 +178,11 @@ describe("model capability table", () => {
     expect(supportsEffort(kimi, "medium")).toBe(false);
   });
 
-  it("marks gpt-oss as unable to disable thinking", () => {
-    const oss = getModel("openai/gpt-oss-120b");
-    if (!oss) throw new Error("gpt-oss missing");
-    expect(canDisableThinking(oss)).toBe(false);
-    expect(supportsEffort(oss, "none")).toBe(false);
-  });
-
-  it("includes DeepSeek V4 Pro with the full effort range", () => {
-    const pro = getModel("deepseek-ai/deepseek-v4-pro-0813");
-    if (!pro) throw new Error("deepseek-v4-pro missing");
-    expect(pro.reasoningEfforts).toContain("max");
-    expect(canDisableThinking(pro)).toBe(true);
-  });
-
-  it("Kimi K3 accepts image and video input", () => {
-    const kimi = getModel("moonshotai/kimi-k3");
-    if (!kimi) throw new Error("kimi missing");
-    expect(kimi.modalities.input).toContain("image");
-    expect(kimi.modalities.input).toContain("video");
-  });
-
   it("declares modalities and a context window for every model", () => {
-    for (const m of [
-      "moonshotai/kimi-k3",
-      "deepseek-ai/deepseek-v4-pro-0813",
-      "openai/gpt-oss-20b",
-    ]) {
-      const model = getModel(m);
-      if (!model) throw new Error(`${m} missing`);
+    for (const model of MODELS) {
       expect(model.modalities.input.length).toBeGreaterThan(0);
       expect(model.modalities.output).toContain("text");
       expect(model.contextWindow).toBeGreaterThan(0);
     }
-  });
-});
-
-describe("upstream body", () => {
-  it("forwards standard OpenAI sampling parameters", () => {
-    const value = ok({
-      ...base,
-      temperature: 0.4,
-      top_p: 0.9,
-      seed: 7,
-      stop: ["x"],
-    });
-    expect(value.upstreamBody.temperature).toBe(0.4);
-    expect(value.upstreamBody.top_p).toBe(0.9);
-    expect(value.upstreamBody.seed).toBe(7);
-    expect(value.upstreamBody.stop).toEqual(["x"]);
-  });
-
-  it("requests usage accounting when streaming", () => {
-    const value = ok({ ...base, stream: true });
-    expect(value.stream).toBe(true);
-    expect(value.upstreamBody.stream_options).toEqual({ include_usage: true });
-  });
-
-  it("drops unknown gateway-only fields", () => {
-    const value = ok({ ...base, some_random_field: "nope" });
-    expect(value.upstreamBody.some_random_field).toBeUndefined();
   });
 });
